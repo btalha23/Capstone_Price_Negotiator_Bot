@@ -1,0 +1,81 @@
+<!-- 
+Capstone Price Negotiator Front-End
+Date Created: 5/28/2024
+Last Edited: 5/29/2024
+
+Purpose: This is our landing/interaction page for our Capstone web app.
+         Page contents are dynamically updated using our script.js file
+		 and in future builds will encapsulate our chatbot system within itself as well.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Negotiator Ecommerce Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Price Negotiator Ecommerce Store</h1>
+        <!-- NavBar -->
+        <nav>
+            <ul>
+                <li><a id="home-link" href="#">Home</a></li>
+                <li><a id="history-link" href="#">Purchase History</a></li>
+                <li id="signup-nav-item"><a id="signup-link" href="#">Sign-Up</a></li>
+                <li id="login-nav-item"><a id="login-link" href="#">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="product-section">
+            <h2>Products</h2>
+            <div id="product-list">
+                <!-- Products will be dynamically inserted here -->
+            </div>
+        </section>
+        <section id="chatbot-section" class="hidden">
+            <h2>Chatbot</h2>
+            <div id="chatbox">
+                <div id="chat-content"></div>
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button id="send-btn">Send</button>
+            </div>
+        </section>
+
+        <section id="login-section" class="hidden">
+            <h2>Login</h2>
+            <form id="login-form">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+                <button type="submit">Login</button>
+            </form>
+            <p id="login-error-msg" class="error-msg hidden">Invalid username or password</p>
+            <span id="account-info" class="hidden"></span> <!-- displaying account info -->        
+        </section>
+        
+        <section id="signup-section" class="hidden">
+            <h2>Sign Up</h2>
+            <form id="signup-form">
+                <label for="signup-username">Username:</label>
+                <input type="text" id="signup-username" required>
+                <label for="signup-password">Password:</label>
+                <input type="password" id="signup-password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+        </section>
+        <section id="history-section" class="hidden">
+            <h2>Purchase History</h2>
+            <div id="history-list">
+                <!-- Purchase history will be dynamically inserted here -->
+            </div>
+        </section>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
