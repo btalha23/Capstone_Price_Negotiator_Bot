@@ -1,6 +1,6 @@
 # Capstone_Price_Negotiator_Bot
 
-## May,5. 2024 - Justin
+## May, 25. 2024 - Justin
 + Implemented a simple skeleton build for our front-end deployment
 + Added very basic core interactions such as Navbars, buttons, links
 + Created a simple CSS style schema
