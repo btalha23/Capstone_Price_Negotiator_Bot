@@ -1,0 +1,4 @@
+playground_chatbot/
+.conda/
+.idea/
+Chatbot_Text_Based_Interaction/src/__pycache__/
