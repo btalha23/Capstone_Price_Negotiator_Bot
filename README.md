@@ -20,3 +20,6 @@ Data Source: ...
 + Created a .JSON file that stores encrypted account details
 + Integrated simple Login functionality for accounts that have been saved to our .JSON file.
 + Various Front-End tweaks
+
+## June, 03. 2024 - Batool
++ Implemented the first, very simple text-based chatbot with pre-defined responses 
