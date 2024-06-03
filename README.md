@@ -5,3 +5,6 @@
 + Added very basic core interactions such as Navbars, buttons, links
 + Created a simple CSS style schema
 + Started on some of the core scripting logic within our script.js
+
+## June, 03. 2024 - Batool
++ Implemented the first, very simple text-based chatbot with pre-defined responses 
