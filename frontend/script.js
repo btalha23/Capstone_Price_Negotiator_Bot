@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Base URL for the backend API
+    const apiUrl = 'http://localhost:5000/api/users';
 
-    // This is where we dynamically add our products and their prices:
+    // Sample product data
     const products = [
         { id: 1, name: 'Product 1', price: 100 },
         { id: 2, name: 'Product 2', price: 200 },
@@ -80,6 +82,88 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPurchaseHistory(); // Load the purchase history if the user is logged in
         } else {
             alert('Please login to view purchase history.');
+        }
+    });
+
+    // Handle login form submission
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent the default form submission behavior
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // Send a login request to the backend
+            const response = await fetch(`${apiUrl}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                authToken = data.token; // Store the received token
+                currentUser = username; // Store the current user's username
+                alert('Login successful');
+                productSection.classList.remove('hidden');
+                loginSection.classList.add('hidden');
+                // Update navigation bar
+                updateNavbar();
+            } else {
+                if (data.msg) {
+                    alert(data.msg); // Display server error message
+                } else {
+                    alert('Server error');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Network error'); // Display network error message
+        }
+    });
+
+    // Function to update the navigation bar based on authentication status
+    function updateNavbar() {
+    const loginNavItem = document.getElementById('login-nav-item');
+    const signupNavItem = document.getElementById('signup-nav-item');
+
+    if (currentUser) {
+        // If user is logged in, replace the "Login" button with the account name
+        loginNavItem.innerHTML = `<a href="#">${currentUser}</a>`;
+        // Hide the "Sign-up" navigation item
+        signupNavItem.style.display = 'none';
+    }
+}
+
+
+    // Handle sign-up form submission
+    signupForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent the default form submission behavior
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+
+        try {
+            // Send a registration request to the backend
+            const response = await fetch(`${apiUrl}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('Sign-up successful');
+                signupSection.classList.add('hidden');
+                loginSection.classList.remove('hidden');
+            } else {
+                alert(data.msg);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Server error');
         }
     });
 
