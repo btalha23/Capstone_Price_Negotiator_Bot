@@ -23,3 +23,9 @@ Data Source: ...
 
 ## June, 03. 2024 - Batool
 + Implemented the first, very simple text-based chatbot with pre-defined responses 
+
+## June, 10. 2024 - Justin
+### Negotiating From Checkout
+- Removed the option to negotiate on an item-by-item basis 
++ Added a simple checkout system as well as adding items to a user's 'cart'
++ Changed the system for dynamically adding products/HTML elements
