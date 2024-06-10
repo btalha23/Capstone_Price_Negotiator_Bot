@@ -1,27 +1,26 @@
+// Ensure the DOM content is loaded before accessing elements
 document.addEventListener('DOMContentLoaded', () => {
     // Base URL for the backend API
     const apiUrl = 'http://localhost:5000/api/users';
 
-    // Sample product data
-    const products = [
-        { id: 1, name: 'Product 1', price: 100 },
-        { id: 2, name: 'Product 2', price: 200 },
-        { id: 3, name: 'Product 3', price: 300 },
-    ];
-
     // References to HTML elements
     const productSection = document.getElementById('product-section');
     const productList = document.getElementById('product-list');
-    const chatbotSection = document.getElementById('chatbot-section');
     const loginSection = document.getElementById('login-section');
     const signupSection = document.getElementById('signup-section');
     const historySection = document.getElementById('history-section');
-    const chatContent = document.getElementById('chat-content');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const historyList = document.getElementById('history-list');
+
+    // Checkout/Negotiate elements
+    const cartSection = document.getElementById('cart-section');
+    const checkoutSection = document.getElementById('checkout-section');
+    const cartItemsDiv = document.getElementById('cart-items');
+    const checkoutItemsDiv = document.getElementById('checkout-items');
+    const checkoutButton = document.getElementById('checkout-button');
+    const negotiateButton = document.getElementById('negotiate-button');
+    const finalizeButton = document.getElementById('finalize-button');
 
     // Find the account-info element in the DOM
     const accountInfo = document.getElementById('account-info');
@@ -29,28 +28,80 @@ document.addEventListener('DOMContentLoaded', () => {
     // Variables to store the current user and their authentication token
     let currentUser = null;
     let authToken = null;
+    let cartItems = [];
 
-    // Function to load products into the product list
-    function loadProducts() {
-        productList.innerHTML = ''; // Clear existing products
-        products.forEach(product => {
-            // Create a new product item element
-            const productItem = document.createElement('div');
-            productItem.classList.add('product-item');
-            productItem.innerHTML = `
-                <h3>${product.name}</h3>
-                <p>Price: $${product.price}</p>
-                <button class="negotiate-btn" data-id="${product.id}">Negotiate</button>
-                <button class="add-to-cart-btn" data-id="${product.id}">Add to Cart</button>
-            `;
-            productList.appendChild(productItem);
+    // Handle adding items to cart
+    function addToCart(product) {
+        cartItems.push(product);
+        updateCart();
+    }
+
+    // Handle checkout button click
+    checkoutButton.addEventListener('click', () => {
+        checkoutItemsDiv.innerHTML = '';
+        cartItems.forEach((item) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.textContent = `${item.name} - $${item.price}`;
+            checkoutItemsDiv.appendChild(itemDiv);
         });
+        cartSection.classList.add('hidden');
+        checkoutSection.classList.remove('hidden');
+    });
+
+    // Handle negotiation process
+    negotiateButton.addEventListener('click', () => {
+        // Example negotiation logic
+        const total = cartItems.reduce((sum, item) => sum + item.price, 0);
+        const negotiatedTotal = total * 0.9; // Assume a 10% discount
+        alert(`Negotiated Price: $${negotiatedTotal.toFixed(2)}`);
+        finalizeButton.classList.remove('hidden');
+    });
+
+    // Handle finalize purchase button click
+    finalizeButton.addEventListener('click', () => {
+        alert('Purchase finalized!');
+        // Clear cart and reset UI
+        cartItems = [];
+        updateCart();
+        checkoutSection.classList.add('hidden');
+        productSection.classList.remove('hidden');
+    });
+
+    // Dynamically Adding Products
+    const products = [
+        { id: 1, name: 'Product 1', price: 100 },
+        { id: 2, name: 'Product 2', price: 200 },
+        { id: 3, name: 'Product 3', price: 300 },
+    ];
+
+    // Instantiate our product items & interactions
+    products.forEach((product) => {
+        const productDiv = document.createElement('div');
+        productDiv.textContent = `${product.name} - $${product.price}`;
+        const addButton = document.createElement('button');
+        addButton.textContent = 'Add to Cart';
+        addButton.addEventListener('click', () => addToCart(product));
+        productDiv.appendChild(addButton);
+        productList.appendChild(productDiv);
+    });
+
+    // Make products visible
+    productSection.classList.remove('hidden');
+
+    // Update cart display
+    function updateCart() {
+        cartItemsDiv.innerHTML = '';
+        cartItems.forEach((item, index) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.textContent = `${item.name} - $${item.price}`;
+            cartItemsDiv.appendChild(itemDiv);
+        });
+        cartSection.classList.remove('hidden');
     }
 
     // Event listeners for navigation links to switch between different sections
     document.getElementById('home-link').addEventListener('click', () => {
         productSection.classList.remove('hidden');
-        chatbotSection.classList.add('hidden');
         loginSection.classList.add('hidden');
         signupSection.classList.add('hidden');
         historySection.classList.add('hidden');
@@ -58,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('login-link').addEventListener('click', () => {
         productSection.classList.add('hidden');
-        chatbotSection.classList.add('hidden');
         loginSection.classList.remove('hidden');
         signupSection.classList.add('hidden');
         historySection.classList.add('hidden');
@@ -66,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('signup-link').addEventListener('click', () => {
         productSection.classList.add('hidden');
-        chatbotSection.classList.add('hidden');
         loginSection.classList.add('hidden');
         signupSection.classList.remove('hidden');
         historySection.classList.add('hidden');
@@ -75,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('history-link').addEventListener('click', () => {
         if (currentUser) {
             productSection.classList.add('hidden');
-            chatbotSection.classList.add('hidden');
             loginSection.classList.add('hidden');
             signupSection.classList.add('hidden');
             historySection.classList.remove('hidden');
@@ -125,17 +173,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to update the navigation bar based on authentication status
     function updateNavbar() {
-    const loginNavItem = document.getElementById('login-nav-item');
-    const signupNavItem = document.getElementById('signup-nav-item');
+        const loginNavItem = document.getElementById('login-nav-item');
+        const signupNavItem = document.getElementById('signup-nav-item');
 
-    if (currentUser) {
-        // If user is logged in, replace the "Login" button with the account name
-        loginNavItem.innerHTML = `<a href="#">${currentUser}</a>`;
-        // Hide the "Sign-up" navigation item
-        signupNavItem.style.display = 'none';
+        if (currentUser) {
+            // If user is logged in, replace the "Login" button with the account name
+            loginNavItem.innerHTML = `<a href="#">${currentUser}</a>`;
+            // Hide the "Sign-up" navigation item
+            signupNavItem.style.display = 'none';
+        }
     }
-}
-
 
     // Handle sign-up form submission
     signupForm.addEventListener('submit', async (event) => {
@@ -171,9 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (event) => {
         if (event.target.classList.contains('negotiate-btn')) {
             const productId = event.target.getAttribute('data-id');
-            chatbotSection.classList.remove('hidden');
-            productSection.classList.add('hidden');
-            startChat(productId); // Start a chat for price negotiation
+            alert(`Starting chat for product ${productId}`);
         }
     });
 
@@ -208,11 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    // Function to start a chat for price negotiation (to be implemented)
-    function startChat(productId) {
-        chatContent.innerHTML = `Starting chat for product ${productId}`;
-    }
 
     // Function to load purchase history (to be implemented)
     function loadPurchaseHistory() {

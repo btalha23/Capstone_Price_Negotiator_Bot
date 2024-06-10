@@ -20,12 +20,24 @@
         </nav>
     </header>
     <main>
-        <section id="product-section">
+        <section id="product-section" class="hidden">
             <h2>Products</h2>
-            <div id="product-list">
-                <!-- Products will be dynamically inserted here -->
-            </div>
+            <div id="product-list"></div>
         </section>
+
+        <section id="cart-section" class="hidden">
+            <h2>Cart</h2>
+            <div id="cart-items"></div>
+            <button id="checkout-button">Proceed to Checkout</button>
+        </section>
+
+        <section id="checkout-section" class="hidden">
+            <h2>Checkout</h2>
+            <div id="checkout-items"></div>
+            <button id="negotiate-button">Negotiate Price</button>
+            <button id="finalize-button" class="hidden">Finalize Purchase</button>
+        </section>
+
         <section id="chatbot-section" class="hidden">
             <h2>Chatbot</h2>
             <div id="chatbox">
