@@ -29,3 +29,11 @@ Data Source: ...
 - Removed the option to negotiate on an item-by-item basis 
 + Added a simple checkout system as well as adding items to a user's 'cart'
 + Changed the system for dynamically adding products/HTML elements
+
+## June, 28. 2024 - Justin
+## Added Branch: MVP_Basic_Feature_Merging
+### MVP: Chatbot Integration, Checkout Page
++ Added a Cart system and 'Checkout' page that allows the user to add products to their virtual cart, receive a total, and negotiate/purchase the items.
++ Added chatbot functionality to the new 'Checkout' page.
++ Added a working NavBar to make site navigation more seamless and visible.
+- Commented out the previous 'add to cart' button as it caused bugs/crashed related to the Database.
