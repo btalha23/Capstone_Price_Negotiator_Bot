@@ -64,25 +64,55 @@ def remove_from_cart(product_id):
 
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    if 'user' in session:
+        user_email = session['user']['user_email']
+    else:
+        user_email = None
+
+    # Initialize cart and chat log in session if not already present
+    if 'cart' not in session:
+        session['cart'] = []
+
+    if 'chat_log' not in session:
+        session['chat_log'] = []
+
     if request.method == 'POST':
-        if request.form['action'] == 'purchase':
-            # Handle purchase logic here
-            return "Purchase complete!"
+        if request.form['action'] == 'add_to_cart':
+            product_id = int(request.form['product_id'])
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM Product WHERE product_id=%s", (product_id,))
+            product = cursor.fetchone()
+            if product:
+                session['cart'].append(product)
+                session.modified = True
+        
+        elif request.form['action'] == 'remove_from_cart':
+            product_id = int(request.form['product_id'])
+            session['cart'] = [item for item in session['cart'] if item['product_id'] != product_id]
+            session.modified = True
+
+        elif request.form['action'] == 'purchase':
+            # Handle purchase logic here if needed
+            pass
+        
         elif request.form['action'] == 'negotiate':
             user_input = request.form['negotiate_input']
             response = nlp.get_response(user_input)
-            chat_log = session.get('chat_log', [])
-            chat_log.append({'user': user_input, 'bot': response})
-            session['chat_log'] = chat_log
-            return render_template('checkout.html', cart=session.get('cart', []), total_price=calculate_total_price(), chat_log=session['chat_log'])
+            session['chat_log'].append({'user': user_input, 'bot': response})
 
-    return render_template('checkout.html', cart=session.get('cart', []), total_price=calculate_total_price(), chat_log=session.get('chat_log', []))
+    cart = session['cart']
+    total_price = calculate_total_price(cart)  # Calculate total price based on cart items
 
-def calculate_total_price():
-    total = 0
-    for item in session.get('cart', []):
-        total += item['product_price']
-    return total
+    return render_template('checkout.html', user_email=user_email, cart=cart, total_price=total_price, chat_log=session['chat_log'])
+
+
+# Function to calculate total price of items in the cart
+def calculate_total_price(cart):
+    total_price = 0
+    for item in cart:
+        total_price += item['product_price']
+    return total_price
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
