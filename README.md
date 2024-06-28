@@ -31,7 +31,7 @@ Data Source: ...
 + Changed the system for dynamically adding products/HTML elements
 
 ## June, 28. 2024 - Justin
-## Added Branch: MVP_Basic_Feature_Merging
+### Added Branch: MVP_Basic_Feature_Merging
 ### MVP: Chatbot Integration, Checkout Page
 + Added a Cart system and 'Checkout' page that allows the user to add products to their virtual cart, receive a total, and negotiate/purchase the items.
 + Added chatbot functionality to the new 'Checkout' page.
