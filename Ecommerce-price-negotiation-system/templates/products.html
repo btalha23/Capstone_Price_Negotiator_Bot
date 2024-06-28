@@ -1,52 +1,25 @@
-<!-- templates/products.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Product Catalog</title>
-    <style>
-        .checkout-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        .checkout-button {
-            padding: 10px 20px;
-            background-color: #4CAF50; /* Green */
-            color: white;
-            border: none;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            transition-duration: 0.4s;
-        }
-        .checkout-button:hover {
-            background-color: white;
-            color: black;
-            border: 2px solid #4CAF50;
-        }
-        .logout-button {
-            background-color: #f44336; /* Green */
-        }
-        .logout-button:hover {
-            border: 2px solid #f44336;
-        }
-    </style>
-       
+</head>
 <body>
-
-    <div class="checkout-container">
-        <a href="{{ url_for('checkout') }}" class="checkout-button">Go to Checkout</a>
-        <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
-    </div>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('products') }}">Products</a>
+        <a href="{{ url_for('checkout') }}">Cart</a>
+        {% if session.get('user') %}
+            <a href="{{ url_for('logout') }}">Sign Out</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+    </nav>
     <h1>Product Catalog</h1>
     <ul>
         {% for product in products %}
-        
+        <li>
             <img src="{{ product.product_image }}" alt="{{ product.product_name }}" style="width:100px;height:100px;">
             <h2>{{ product.product_name }}</h2>
             <p>{{ product.product_description }}</p>
@@ -54,13 +27,11 @@
             <p>Available Units: {{ product.units_available }}</p>
             <p>Brand: {{ product.brand_id }}</p>
             <p>Category: {{ product.category_id }}</p>
-            <form action="{{ url_for('add_to_cart') }}" method="post">
-                <input type="hidden" name="product_id" value="{{ product.product_id }}">
+            <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="post">
                 <button type="submit">Add to Cart</button>
             </form>
         </li>
         {% endfor %}
     </ul>
-    <a href="{{ url_for('checkout') }}">Go to Checkout</a>
 </body>
 </html>
