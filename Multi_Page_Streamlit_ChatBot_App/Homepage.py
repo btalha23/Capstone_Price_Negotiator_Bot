@@ -2,6 +2,10 @@ import streamlit as st
 from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import AIMessage, HumanMessage
 
+def init_database(user: str, password: str, host: str, port: str, database: str) -> SQLDatabase:
+  db_uri = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}"
+  return SQLDatabase.from_uri(db_uri)
+
 st.set_page_config(
     page_title="Multipage App",
     page_icon="👋",
@@ -24,3 +28,11 @@ pg = st.navigation([login_page,
                     checkout_page])
 pg.run()
 
+db = init_database(
+  user="root",
+  password="root",
+  host="localhost",
+  port="3306",
+  database="price_negotiation"
+)
+st.session_state.db = db
