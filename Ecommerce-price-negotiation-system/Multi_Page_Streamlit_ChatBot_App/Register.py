@@ -46,6 +46,8 @@ if st.button("Register"):
                     )
         
         st.success("User Registered Successfully")
+        st.session_state['redirect_to_login'] = True
+        st.experimental_rerun()
 
     # st.session_state['first_name'] = ""
     # st.session_state['last_name'] = ""

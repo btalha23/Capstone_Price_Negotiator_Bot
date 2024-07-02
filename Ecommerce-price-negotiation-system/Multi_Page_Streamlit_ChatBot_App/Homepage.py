@@ -24,3 +24,4 @@ pg = st.navigation([login_page,
                     checkout_page])
 pg.run()
 
+
