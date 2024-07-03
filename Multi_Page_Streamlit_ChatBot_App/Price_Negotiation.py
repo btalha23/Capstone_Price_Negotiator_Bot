@@ -16,6 +16,15 @@ previous_response_lc_bp = ""
 previous_response_lc_pn = ""
 
 # Initialization
+if 'previous_response_lc' not in st.session_state:
+    st.session_state['previous_response_lc'] = None
+
+if 'previous_response_lc_bp' not in st.session_state:
+    st.session_state['previous_response_lc_bp'] = None
+
+if 'previous_response_lc_pn' not in st.session_state:
+    st.session_state['previous_response_lc_pn'] = None
+
 if 'loyalty_customer_eligibity_checked' not in st.session_state:
     st.session_state['loyalty_customer_eligibity_checked'] = False
 
@@ -40,14 +49,21 @@ def get_loyalty_customer_num_purchase_days(_):
 def get_loyalty_customer_bulk_purchases_quantity(_):
     return loyalty_customer_eligibity[1]
 
-st.title("Price Negotiator Chatbot")
-
-load_dotenv(find_dotenv())
+# def get_customer_id(_):
+#     print(f"session_state_customer_id {st.session_state.get('customer_id')}")
+#     print(f"session_state_customer_id {st.session_state['customer_id']}")
+#     # return st.session_state['customer_id']
+#     return st.session_state.get('customer_id')
 
 def get_sql_chain_loyalty_customer(db):
     template = """
         You are a sales representative at a company. You are interacting with customers to offer them special
         discounts. These discounts are subject to if the customer qualifies as a loyalty customer. 
+        First of all check if the user is a valid logged in user. To verify this, evaluate {customer_id}. 
+        If {customer_id} is empty or is None, then inform that the customer is not logged in.
+        If {customer_id}  has a valid value, extract all records for the customer with customer ID 
+        {customer_id}.
+
         To be a loyalty customer there should be a purchase record associated with the customer 
         for a minumun of {loyalty_customer_num_purchase_days} unique dates. If there are more than one purchase on a day, count that day only
         once.
@@ -66,7 +82,7 @@ def get_sql_chain_loyalty_customer(db):
         Question: Check for being a loyalty customer
         SQL Query: SELECT customer_id, COUNT(DISTINCT DATE(interaction_date)) AS purchase_days
                     FROM CustomerInteractions
-                    WHERE interaction_type = 'purchase'
+                    WHERE interaction_type = 'purchase' AND customer_id = {customer_id}
                     GROUP BY customer_id
                     HAVING purchase_days >= 10;
         Question: What is the average price of the saucepans?
@@ -96,17 +112,26 @@ def get_sql_chain_loyalty_customer(db):
         | StrOutputParser()
     )
 
-def get_response_loyalty_customer(user_query: str, db: SQLDatabase, chat_history: list):
+def get_response_loyalty_customer(user_query: str, db: SQLDatabase, chat_history: list, customer_id: int):
     st.session_state['loyalty_customer_eligibity_checked'] = True
 
     sql_chain = get_sql_chain_loyalty_customer(db)
-    
+
+    print(f"customer_id: {customer_id}")
+
     template = """
         You are a sales representative at a company. You are interacting with customers to offer them special
         discounts. These discounts are subject to if the customer qualifies as a loyalty customer. 
+        First of all check if the user is a valid logged in user. To verify this, evaluate {customer_id}. 
+        If {customer_id} is empty or is None, then inform that the customer is not logged in.
+        If {customer_id}  has a valid value, extract all records for the customer with customer ID 
+        {customer_id}. 
+
         To be a loyalty customer there should be a purchase record associated with the customer 
         for a minumun of {loyalty_customer_num_purchase_days} unique dates. If there are more than one purchase on a day, count that day only
-        once. If the sql response is empty, then get the actual number of purchase days and inform 
+        once. 
+        
+        If the sql response is empty, then get the actual number of purchase days and inform 
         the customer that the customer is not eligible for the discount. 
         
         Based on the table schema below, question, sql query, and sql response, write a natural language response.
@@ -138,6 +163,7 @@ def get_response_loyalty_customer(user_query: str, db: SQLDatabase, chat_history
     return chain.invoke({
         "question": user_query,
         "chat_history": chat_history,
+        "customer_id": customer_id
     })
 
 def get_sql_chain_lc_bulk_purchase(db):
@@ -390,7 +416,7 @@ def get_response_lc_price_negotiation(user_query: str, db: SQLDatabase, chat_his
         "chat_history": chat_history,
     })
 
-def get_response(user_query: str, db: SQLDatabase, chat_history: list):
+def get_response(user_query: str, db: SQLDatabase, chat_history: list, customer_id: int):
     print(f"get_response count {st.session_state['global_get_response_count']}")
     
     print(f"loyalty customer check {st.session_state['loyalty_customer_eligibity_checked']}")
@@ -398,14 +424,17 @@ def get_response(user_query: str, db: SQLDatabase, chat_history: list):
     if not st.session_state['loyalty_customer_eligibity_checked']:
         print("Checking loyalty customer eligibility")
         response_loyalty_customer = \
-            get_response_loyalty_customer(user_query, db, chat_history)
-        global previous_response_lc
-        final_response = previous_response_lc = response_loyalty_customer
+            get_response_loyalty_customer(user_query, db, chat_history, customer_id)
+        # global previous_response_lc
+        final_response = st.session_state['previous_response_lc'] = response_loyalty_customer
         print(f"loyalty customer check {st.session_state['loyalty_customer_eligibity_checked']}")
         # print(loyalty_customer_eligibity_checked)
 
     if (st.session_state['global_get_response_count'] == 1) and st.session_state['loyalty_customer_eligibity_checked']:
         print("loyalty customer flag setup")
+        previous_response_lc = st.session_state['previous_response_lc']
+        print(f"previous_response_lc: {previous_response_lc}")
+        print(f"the find response: {previous_response_lc.find('not')}")
         if previous_response_lc.find('not') != -1:
             print("The customer is not a loyalty customer")
             st.session_state['loyalty_customer_flag'] = False
@@ -417,12 +446,14 @@ def get_response(user_query: str, db: SQLDatabase, chat_history: list):
         print("Checking for the bulk purchase")
         response_bulk_purchase = \
             get_response_lc_bulk_purchase(user_query, db, chat_history)
-        global previous_response_lc_bp
-        final_response = previous_response_lc_bp = response_bulk_purchase
+        # global previous_response_lc_bp
+        final_response = st.session_state['previous_response_lc_bp'] = response_bulk_purchase
         print(final_response)
     
     if (st.session_state['global_get_response_count'] == 2) and st.session_state['loyalty_customer_bulk_purchase_checked']:
         print("loyalty customer bulk purchase flag setup")
+        previous_response_lc_bp = st.session_state['previous_response_lc_bp']
+        print(f"previous_response_lc_bp: {previous_response_lc_bp}")
         if previous_response_lc_bp.find('not') != -1:
             print("The customer is not eligible for further discounts")
             st.session_state['lc_bulk_purchase_flag'] = False
@@ -443,13 +474,28 @@ def get_response(user_query: str, db: SQLDatabase, chat_history: list):
         response_price_negotiation = \
             get_response_lc_price_negotiation(user_query, db, chat_history)
         # global previous_response_lc_pn
-        final_response = previous_response_lc_pn = response_price_negotiation
+        final_response = st.session_state['previous_response_lc_pn'] = response_price_negotiation
         print(final_response)
+
+    if (st.session_state['global_get_response_count'] >= 1) and not st.session_state['loyalty_customer_flag']:
+        final_response = st.session_state['previous_response_lc']
 
     st.session_state['global_get_response_count'] = st.session_state['global_get_response_count'] + 1
     print(f"get_response count {st.session_state['global_get_response_count']}")
 
     return final_response
+
+st.title("Price Negotiator Chatbot")
+
+load_dotenv(find_dotenv())
+
+if st.session_state['customer_id']:
+        st.sidebar.button("Logout", on_click=lambda: st.session_state.update(customer_id=None, cart=[]))
+        st.sidebar.write(f"Customer ID: {st.session_state['customer_id']}")
+else:
+    st.sidebar.write("Not logged in")
+
+print(f"session_state_customer_id {st.session_state['customer_id']}")
 
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = [
@@ -476,7 +522,10 @@ if user_query is not None and user_query.strip() != "":
         
     with st.chat_message("AI"):
         # response = get_response_loyalty_customer(user_query, st.session_state.db, st.session_state.chat_history)
-        response = get_response(user_query, st.session_state.db, st.session_state.chat_history)
+        response = get_response(user_query, 
+                                st.session_state.db, 
+                                st.session_state.chat_history,
+                                st.session_state.customer_id)
         st.markdown(response)
         
     st.session_state.chat_history.append(AIMessage(content=response))
