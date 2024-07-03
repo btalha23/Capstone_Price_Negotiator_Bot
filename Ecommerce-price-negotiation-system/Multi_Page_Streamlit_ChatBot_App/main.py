@@ -1,5 +1,7 @@
 import streamlit as st
 import mysql.connector
+from PIL import Image
+import os
 
 # MySQL Configuration
 db_conn = None
@@ -35,6 +37,18 @@ def show_products():
     products = cursor.fetchall()
     for product in products:
         #st.image(f"./static/images/{product['product_image']}", width=150)
+        # Display product image
+        image_path = product.get('product_image', '').lstrip('/')
+        if os.path.exists(image_path):
+            image = Image.open(image_path)
+
+            # Resize the image to half its size (Divide by a higher number to make it even smaller)
+            new_size = (image.width // 2, image.height // 2)
+            resized_image = image.resize(new_size)
+            st.image(resized_image, caption=product.get("product_name", "Unnamed Product"), use_column_width=True)
+        else:
+            # If an image path does not lead to an image display this message
+            st.write("Image not found")
         st.write(product['product_name'])
         st.write(product['product_description'])
         st.write(f"Price: ${product['product_price']}")
