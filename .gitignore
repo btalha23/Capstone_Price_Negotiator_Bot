@@ -1,5 +1,5 @@
 .env
-playground_chatbot/
+playground_chatbot_ecommerce/
 .conda/
 .idea/
 Chatbot_Text_Based_Interaction/src/__pycache__/
