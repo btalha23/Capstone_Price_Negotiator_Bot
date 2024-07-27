@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Price Negotiator Chatbot</title>
+</head>
+<body>
+    <div>
+        <h1>Welcome to our store!</h1>
+        <div id="chatbot">
+            <input type="text" id="userInput" placeholder="Enter your message">
+            <button onclick="sendMessage()">Send</button>
+            <div id="chatHistory"></div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput').value;
+            const productID = 1; // Example product ID
+            const units = parseInt(userInput.match(/\d+/)[0]); // Extract number of units
+
+            const response = await fetch('http://localhost:5000/negotiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productID, units: units })
+            });
+
+            const data = await response.json();
+            const chatHistory = document.getElementById('chatHistory');
+
+            if (data.error) {
+                chatHistory.innerHTML += `<p>Bot: ${data.error}</p>`;
+            } else {
+                chatHistory.innerHTML += `
+                    <p>User: ${userInput}</p>
+                    <p>Bot: The original price for ${units} units is $${data.original_price}. The negotiated price is $${data.negotiated_price}.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
