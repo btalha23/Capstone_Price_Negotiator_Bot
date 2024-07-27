@@ -1,25 +1,44 @@
-
 import os
-secret_key = os.urandom(24)
-print(secret_key)
-
 from flask import Flask, render_template, request, redirect, url_for, session
-import mysql.connector
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import SQLAlchemyError
 import datetime
 
 app = Flask(__name__)
 
-# Set the secret key to some random bytes. Keep this really secret!
-app.secret_key = 'your_secret_key'
+app.secret_key = os.urandom(24)
 
+# Database configuration
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# MySQL Configuration
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="root",
-    database="price_negotiation"
-)
+# Flask SQLAlchemy configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize the database
+db = SQLAlchemy(app)
+
+# Define models
+class Product(db.Model):
+    __tablename__ = 'Product'
+    product_id = db.Column(db.Integer, primary_key=True)
+    product_name = db.Column(db.String(255), nullable=False)
+    product_price = db.Column(db.Float, nullable=False)
+
+class Customer(db.Model):
+    __tablename__ = 'Customer'
+    customer_id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(255), nullable=False)
+    last_name = db.Column(db.String(255), nullable=False)
+    customer_email = db.Column(db.String(255), nullable=False, unique=True)
+    customer_location = db.Column(db.String(255), nullable=False)
+
+class CustomerInteraction(db.Model):
+    __tablename__ = 'CustomerInteractions'
+    interaction_id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('Customer.customer_id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('Product.product_id'), nullable=False)
+    interaction_type = db.Column(db.String(255), nullable=False)
 
 @app.route('/')
 def index():
@@ -27,24 +46,27 @@ def index():
 
 @app.route('/products')
 def products():
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM Product")
-    products = cursor.fetchall()
-    return render_template('products.html', products=products)
+    try:
+        products = Product.query.all()
+        return render_template('products.html', products=products)
+    except SQLAlchemyError as e:
+        return str(e)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    print("hello")
     if request.method == 'POST':
-        
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         customer_email = request.form['customer_email']
         customer_location = request.form['customer_location']
-        cursor = db.cursor()
-        cursor.execute("INSERT INTO customer (first_name, last_name, customer_email,customer_location) VALUES (%s, %s, %s, %s)", 
-                       (first_name, last_name, customer_email, customer_location))
-        db.commit()
+        new_customer = Customer(
+            first_name=first_name,
+            last_name=last_name,
+            customer_email=customer_email,
+            customer_location=customer_location
+        )
+        db.session.add(new_customer)
+        db.session.commit()
         return redirect(url_for('login'))
     else:
         return render_template('register.html')
@@ -53,30 +75,29 @@ def register():
 def login():
     if request.method == 'POST':
         customer_email = request.form['customer_email']
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Customer WHERE customer_email=%s", (customer_email,))
-        customer = cursor.fetchone()
+        customer = Customer.query.filter_by(customer_email=customer_email).first()
         if customer:
-            session['customer_id'] = customer['customer_id']
+            session['customer_id'] = customer.customer_id
             return redirect(url_for('products'))
     return render_template('login.html')
 
 @app.route('/add_to_cart', methods=['POST'])
 def add_to_cart():
     product_id = request.form.get('product_id')
-    customer_id = session.get('customer_id') # Assume the user is logged in and user_id is stored in the session
+    customer_id = session.get('customer_id')  # Assume the user is logged in and user_id is stored in the session
     if 'cart' not in session:
         session['cart'] = []
     session['cart'].append(product_id)
     session.modified = True  # Mark the session as modified
-    
+
     # Record the interaction in the database
-    cursor = db.cursor()
-    cursor.execute("""
-        INSERT INTO CustomerInteractions (customer_id, product_id, interaction_type)
-        VALUES (%s, %s, 'cart_add')
-    """, (customer_id, product_id))
-    db.commit()
+    new_interaction = CustomerInteraction(
+        customer_id=customer_id,
+        product_id=product_id,
+        interaction_type='cart_add'
+    )
+    db.session.add(new_interaction)
+    db.session.commit()
     return redirect(url_for('products'))
 
 @app.route('/checkout')
@@ -84,41 +105,38 @@ def checkout():
     if 'cart' not in session or not session['cart']:
         return "Your cart is empty"
     
-    cursor = db.cursor(dictionary=True)
     cart_items = session['cart']
-    placeholders = ', '.join(['%s'] * len(cart_items))
-    query = f"SELECT * FROM Product WHERE product_id IN ({placeholders})"
-    cursor.execute(query, cart_items)
-    products = cursor.fetchall()
+    products = Product.query.filter(Product.product_id.in_(cart_items)).all()
     return render_template('checkout.html', products=products)
 
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     if 'cart' not in session or not session['cart']:
         return redirect(url_for('checkout'))
-    
+
     # Simulate order confirmation logic
     customer_id = session.get('customer_id')  # Assume the user is logged in and user_id is stored in the session
-    
+
     if not customer_id:
         return "Error: Customer is not logged in", 400
-    
+
     cart_items = session['cart']
-    
+
     # Record the interaction in the database
-    cursor = db.cursor()
     for product_id in cart_items:
-        cursor.execute("""
-            INSERT INTO CustomerInteractions (customer_id, product_id, interaction_type)
-            VALUES (%s, %s, 'purchase')
-        """, (customer_id, product_id))
-    db.commit()
-    
+        new_interaction = CustomerInteraction(
+            customer_id=customer_id,
+            product_id=product_id,
+            interaction_type='purchase'
+        )
+        db.session.add(new_interaction)
+    db.session.commit()
+
     # Here you would typically save the order details to your database
-    
+
     # Clear the cart after order confirmation
     session.pop('cart', None)
-    
+
     return redirect(url_for('thank_you'))
 
 @app.route('/thank_you')
@@ -130,7 +148,6 @@ def logout():
     # Clear the session data
     session.clear()
     return redirect(url_for('index'))
-
 
 if __name__ == '__main__':
     app.run(debug=True)
