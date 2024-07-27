@@ -29,3 +29,9 @@ Data Source: ...
 - Removed the option to negotiate on an item-by-item basis 
 + Added a simple checkout system as well as adding items to a user's 'cart'
 + Changed the system for dynamically adding products/HTML elements
+
+## July, 26. 2024 - Justin
+### Heroku Deployment Setup
++ Added a Procfile and setup.sh
++ Freezed all of our library dependencies into a "requirements.txt"
+
