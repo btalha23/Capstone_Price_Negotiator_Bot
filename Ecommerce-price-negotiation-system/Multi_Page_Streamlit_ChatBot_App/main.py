@@ -8,8 +8,8 @@ db_conn = None
 if 'db' not in st.session_state:
     db_conn = mysql.connector.connect(
         host="localhost",
-        user="root",
-        password="root",
+        user="ahsan",
+        password="MyNewPass1!",
         database="price_negotiation"
     )
     st.session_state.db = db_conn
