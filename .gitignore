@@ -1,0 +1,7 @@
+.env
+playground_chatbot/
+.conda/
+.idea/
+Chatbot_Text_Based_Interaction/src/__pycache__/
+app/venv/
+Ecommerce-price-negotiation-system/venv/
