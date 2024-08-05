@@ -29,3 +29,8 @@ Data Source: ...
 - Removed the option to negotiate on an item-by-item basis 
 + Added a simple checkout system as well as adding items to a user's 'cart'
 + Changed the system for dynamically adding products/HTML elements
+
+## August, 05. 2024 - Batool
+### Price Negotiating Chatbot
+- Removed the LangChain based implementation of the chatbot 
++ Added a new LangGraph based implementation of the chatbot
