@@ -1,5 +1,4 @@
 
-st.title("Products")
 import streamlit as st
 import mysql.connector
 from PIL import Image   # We use pillow to handle image handling since Streamlit does not support local image handling by default.
