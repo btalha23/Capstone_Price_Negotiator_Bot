@@ -324,10 +324,8 @@ loyalty_customer_eligibity = [{"loyalty_customer_num_purchase_days": 3},
 
 # llm = ChatOpenAI(temperature=0,
 #                  model="gpt-3.5-turbo")
-
-#llm = ChatOpenAI(temperature=0, openai_api_key='SABER'S KEY GOES HERE')
-
-llm = ChatOpenAI(temperature=0, model='gpt-4o-mini')
+llm = ChatOpenAI(temperature=0,
+                 model='gpt-4o-mini')
 
 @tool
 def loyalty_customer_check() -> str:

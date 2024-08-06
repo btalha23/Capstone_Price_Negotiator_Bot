@@ -1,65 +1,78 @@
 import streamlit as st
+import mysql.connector
+# from streamlit_extras.switch_page_button import switch_page
+
+# MySQL Configuration
+db_conn = None
+if 'db_mysql' not in st.session_state:
+    db_conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="price_negotiation"
+    )
+    st.session_state.db_mysql = db_conn
+
+# pg_checkout = st.navigation(pages=[st.session_state['confirm_order_page'], 
+#                                    st.session_state['price_negotiation_chatbot_page'],
+#                                   ],
+#                             position="hidden")
+# pg_checkout.run()
 
 def checkout():
-    st.title("Register")
+    if not st.session_state['cart']:
+        st.write("Your cart is empty")
+        return
+    
+    cursor = st.session_state.db_mysql.cursor(dictionary=True)
+    cart_items = [item['product_id'] for item in st.session_state['cart']]
+    placeholders = ', '.join(['%s'] * len(cart_items))
+    query = f"SELECT * FROM Product WHERE product_id IN ({placeholders})"
+    cursor.execute(query, cart_items)
+    products = cursor.fetchall()
 
-    st.write("New Customers - Please Register Customer Info Here")
+    # st.write("### Checkout")
+    total_price = 0
+    for item in st.session_state['cart']:
+        for product in products:
+            if product['product_id'] == item['product_id']:
+                #st.image(f"./static/images/{product['product_image']}", width=150)
+                st.write(product['product_name'])
+                st.write(f"Price: ${product['product_price']}")
+                st.write(f"Quantity: {item['quantity']}")
+                st.write('---')
+                total_price += product['product_price'] * item['quantity']
+    
+    st.write(f"Total Price: ${total_price}")
 
-    # st.text_input("First Name", value="", key="first_name")
-    # st.write("You have entered: ", st.session_state["first_name"])
+    if st.button('Confirm Order'):
+        st.switch_page(st.session_state['confirm_order_page'])
+        # switch_page(st.session_state['confirm_order_page'])
 
-    # st.text_input(label="First Name", value="", key="first_name")
-    # st.text_input(label="Last Name", value="", key="last_name")
-    # st.text_input(label="Customer Email", value="", key="customer_email")
-    # st.text_input(label="Customer Location", value="", key="customer_location")
+    if st.button('Start Price Negotiation'):
+        st.switch_page(st.session_state['price_negotiation_chatbot_page'])
 
-    placeholder_first_name = st.empty()
-    placeholder_last_name = st.empty()
-    placeholder_customer_email = st.empty()
-    placeholder_customer_location = st.empty()
-    # input = placeholder.text_input('text')
-    # click_clear = st.button('clear text input', key=1)
-    # if click_clear:
-    #     input = placeholder.text_input('text', value='', key=1)
+st.title("Checkout")
 
-    user_input_first_name = placeholder_first_name.text_input(label="First Name", value="", key="first_name")
-    user_input_last_name = placeholder_last_name.text_input(label="Last Name", value="", key="last_name")
-    user_input_customer_email = placeholder_customer_email.text_input(label="Customer Email", value="", key="customer_email")
-    user_input_customer_location = placeholder_customer_location.text_input(label="Customer Location", value="", key="customer_location")
+if st.session_state['customer_id']:
+        st.sidebar.button("Logout", on_click=lambda: st.session_state.update(customer_id=None, cart=[]))
+        st.sidebar.write(f"Customer ID: {st.session_state['customer_id']}")
+else:
+    st.sidebar.write("Not logged in")
 
-    # st.write("You have entered", st.session_state['first_name'])
+checkout()
 
-    if st.button("Register"):
-        with st.spinner("Connecting to database..."):
-            db_conn_2 = st.session_state.db
-            # sql_command = """INSERT INTO customer (first_name,last_name,customer_email,customer_location) VALUES (:first_name, :last_name, :customer_email, :customer_location)
-            #                  ON DUPLICATE KEY UPDATE first_name=VALUES(first_name), last_name=VALUES(last_name), customer_email=VALUES(customer_email), customer_location=VALUES(customer_location)
-            #               """
-            sql_command = """INSERT INTO customer (first_name,last_name,customer_email,customer_location) VALUES (:first_name, :last_name, :customer_email, :customer_location)
-                        """
-            sql_parameters = {'first_name': st.session_state['first_name'],
-                            'last_name': st.session_state['last_name'],
-                            'customer_email': st.session_state['customer_email'],
-                            'customer_location': st.session_state['customer_location']}
-                            
-            db_conn_2.run(command=sql_command,
-                        parameters=sql_parameters 
-                        )
-            
-            st.success("User Registered Successfully")
+# if not st.session_state['cart']:
+#     st.write("Your cart is empty")
+# else:      
+#     db_conn_2 = st.session_state.db
+#     # cursor = st.session_state.db.cursor(dictionary=True)
+#     cart_items = [item['product_id'] for item in st.session_state['cart']]
+#     print(f"cart_items {cart_items}")
+#     placeholders = ', '.join(['%s'] * len(cart_items))
+#     print(f"placeholders {placeholders}")
+#     query = f"SELECT * FROM Product WHERE product_id IN ({placeholders})"
+#     print(f"query {query}")
 
-        # st.session_state['first_name'] = ""
-        # st.session_state['last_name'] = ""
-        # st.session_state['customer_email'] = ""
-        # st.session_state['customer_location'] = ""
-        # st.rerun()
-
-        user_input_first_name = placeholder_first_name.text_input(label="First Name")
-        user_input_last_name = placeholder_last_name.text_input(label="Last Name")
-        user_input_customer_email = placeholder_customer_email.text_input(label="Customer Email")
-        user_input_customer_location = placeholder_customer_location.text_input(label="Customer Location")
-
-            
-
-        
-
+#     # cursor.execute(query, cart_items)
+#     # products = cursor.fetchall()
