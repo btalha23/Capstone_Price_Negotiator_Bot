@@ -1272,7 +1272,7 @@ config = {
     "configurable": {
         # The customer_id is used in our discount eligibilty check tools to
         # fetch the information of user's purchases, wishlist, items in the cart etc.
-        "customer_id": "17",
+        "customer_id": st.session_state['customer_id'],
         # Checkpoints are accessed by thread_id
         "thread_id": thread_id,
     }
@@ -1282,7 +1282,7 @@ config = {
 
 st.title("Price Negotiator Chatbot")
 
-st.session_state['customer_id'] = 17
+#st.session_state['customer_id'] = 17
 
 if st.session_state['customer_id']:
         st.sidebar.button("Logout", on_click=lambda: st.session_state.update(customer_id=None, cart=[]))
