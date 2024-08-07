@@ -57,7 +57,7 @@ def init_database(user: str, password: str, host: str, port: str, database: str)
   return SQLDatabase.from_uri(db_uri)
 
 db = init_database(
-  user="root",
+  user="ahsan",
   password="MyNewPass1!",
   host="localhost",
   port="3306",
