@@ -18,7 +18,7 @@ st.title("Welcome to the B2B Ecommerce Website!")
 # st.sidebar.success("Select a page above.")
 
 db = init_database(
-  user="ahsan",
+  user="root",
   password="MyNewPass1!",
   host="localhost",
   port="3306",
