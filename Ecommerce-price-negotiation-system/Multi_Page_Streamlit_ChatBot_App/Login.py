@@ -15,7 +15,7 @@ if st.button('Login'):
     with st.spinner("Connecting to database..."):
         db_conn_2 = st.session_state.db
 
-        sql_command = """SELECT * FROM customer WHERE customer_email = :customer_email
+        sql_command = """SELECT * FROM Customer WHERE customer_email = :customer_email
                     """
         sql_parameters = {'customer_email': st.session_state['login_info']}
                         
