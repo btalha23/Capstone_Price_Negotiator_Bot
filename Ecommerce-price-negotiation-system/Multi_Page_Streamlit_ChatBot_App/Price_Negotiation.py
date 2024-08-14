@@ -3,7 +3,7 @@
 
 @file
 @author BatoolTalha
-@date 05 Aug 2024
+@date 14 Aug 2024
 
 Price Negotiating Chatbot
 
@@ -44,13 +44,9 @@ from datetime import date, datetime
 from dotenv import load_dotenv, find_dotenv
 
 import os
+import re         
 
 load_dotenv(find_dotenv())
-
-# Recommended
-# _set_env("LANGCHAIN_API_KEY")
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_PROJECT"] = "Primary Assistant with Discount Eligibility Checker & Price Whisperer"
 
 def init_database(user: str, password: str, host: str, port: str, database: str) -> SQLDatabase:
   db_uri = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}"
@@ -115,7 +111,7 @@ def _print_event_streamlit(event: dict, _printed: set, max_length=1500):
             print(f"message from message[-1] {message}")
         if message.id not in _printed:
             msg_repr = message.pretty_repr(html=False)
-            # print(f"msg_repr {msg_repr}")
+            print(f"msg_repr {msg_repr}")
             # print(f"message.id {message.id}")
             # print(f"message.content {message.content}")
             # print(f"tool_calls_key {message.tool_calls}")
@@ -156,8 +152,8 @@ class State(TypedDict):
         ],
         update_dialog_stack,
     ]
-    bargain_count: int
-    bargain_offer: list[float]
+    interaction_count: int
+    discount_offer: list[float]
     counter_offer: list[float]
 
 # This node will be shared for exiting all specialized assistants
@@ -608,9 +604,10 @@ def fetch_price_info_for_price_negotiation() -> list[dict]:
 @tool
 def product_specific_discount_checker(product_id: int,
                                       state: State) -> str:
-    """ Check if the querried product (product_id) is present in the extracted common products list (common_products). 
-        If yes, then using the product price info (products_price_info) let the customer know of the maximum possible discount.
-        Otherwise, inform the customer that the product is not eligible for discount. 
+    """ This is the entry point to answer a product specific query about discount. Check if the querried product (product_id)
+        is present in the extracted common products list. If yes, then using the product price info let the customer know of the
+                                                                                                                               
+        maximum possible discount. Otherwise, inform the customer that the product is not eligible for discount.
     """
     config = ensure_config()
     configuration = config.get("configurable", {})
@@ -715,8 +712,8 @@ def product_specific_discount_checker(product_id: int,
         extracted_product_price_margin = product_price_info[0].get('product_margin_percent')
         discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.15)
         
-        state['bargain_offer'].append(discount_offer_1)
-        state['bargain_count'] = 1
+        state['discount_offer'].append(discount_offer_1)
+        state['interaction_count'] = 1
 
         return f"The product can have upto {discount_offer_1} percent discount. Would you like to start bargaining?"
     else:
@@ -730,32 +727,13 @@ def interactive_price_negotiation(product_id: int,
         offer discounts 3 times at most.
     """
 
-    if state['bargain_count'] == None:
-        state['bargain_count'] = 0
-#     elif state['bargain_count'] == 4:
-#         state['bargain_count'] = 0 # Reset the counter
-#     else:
-#         state['bargain_count'] = state['bargain_count']
-
-    # Ask the customer to accept/ reject/ or make counter offer to initial_discount.
-    # If the customer opts to counter offer with amount counter_offer_1, 
-    # check if counter_offer_1 > discount_offer_1, then discount_offer_2 = counter_offer_1 * 0.6
-    # Ask the customer to accept/ reject/ or make counter offer to discount_offer_2.
-    # If the customer opts to counter offer with amount counter_offer_2, 
-    # check if discount_offer_2 < counter_offer_2 < discount_offer_1, then discount_offer_3 = counter_offer_2 * 0.75
-    # Ask the customer to accept/ reject/ or make counter offer to discount_offer_3.
-    # If the customer opts to counter offer with amount counter_offer_3, 
-    # check if discount_offer_3 < counter_offer_3 < discount_offer_2, then discount_offer_4 = counter_offer_3 * 0.9        
-    # Ask the customer to accept/ reject/ or make counter offer to discount_offer_4.
-    # Any time the customer accepts or rejects the discount offer, then CompleteOrEscalate to the host assistant
-
-    # counter_offer_message = state.get('messages')[-1]
-    # print(f"counter_offer_message {counter_offer_message}")
+    if state['interaction_count'] == None:
+        state['interaction_count'] = 0
     
     if customer_counter_offer != None:
         state['counter_offer'].append(customer_counter_offer)
         
-    if state['bargain_count'] == 0:
+    if state['interaction_count'] == 0:
         query_price_info = """
             SELECT DISTINCT
                 ci.customer_id,
@@ -789,56 +767,121 @@ def interactive_price_negotiation(product_id: int,
 
         extracted_product_price_margin = product_price_info[0].get('product_margin_percent')
         discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.15)
-        state['bargain_offer'].append(discount_offer_1)
-         
-        state['bargain_count'] = state['bargain_count'] + 1
-        print(f"bargaining_count print #1: {state['bargain_count']}")
+        state['discount_offer'].append(discount_offer_1)
+        print(f"discount_offer_1 -> {discount_offer_1}")
+        print(f"discount_offers {state['discount_offer']}")
+             
+        state['interaction_count'] = state['interaction_count'] + 1
+        print(f"bargaining_count print #1: {state['interaction_count']}")
         return f"The product can have upto {discount_offer_1} percent discount. Would you like to start bargaining?"
 
-    elif state['bargain_count'] == 1:
-        customer_counter_offer = state.get('counter_offer')[-1]
-        print(f"customer_counter_offer -> {customer_counter_offer}")
-        if state['bargain_offer'][-1] < customer_counter_offer:
-            discount_offer_2 = customer_counter_offer - (customer_counter_offer * 0.6)
-            state['bargain_offer'].append(discount_offer_2)
-        state['bargain_count'] = state['bargain_count'] + 1
-        print(f"bargaining_count print #2: {state['bargain_count']}")
-        return f"The product can have upto {discount_offer_2} percent discount. Would you like to accept or reject or counter offer?"
+    elif state['interaction_count'] == 1:
+        state['interaction_count'] = state['interaction_count'] + 1
+        print(f"bargaining_count print #3: {state['interaction_count']}")
 
-    elif state['bargain_count'] == 2:
-        customer_counter_offer = state.get('counter_offer')[-1]
-        if state['bargain_offer'][-1] < customer_counter_offer < state['bargain_offer'][-2]:
-            discount_offer_3 = customer_counter_offer - (customer_counter_offer * 0.75)
-            state['bargain_offer'].append(discount_offer_3)
-        return f"The product can have upto {discount_offer_3} percent discount. Would you like to accept or reject or counter offer?"
-         
-    elif state['bargain_count'] == 3:
-        customer_counter_offer = state.get('counter_offer')[-1]
-        if state['bargain_offer'][-1] < customer_counter_offer < state['bargain_offer'][-2]:
-            discount_offer_4 = customer_counter_offer - (customer_counter_offer * 0.90)
-            state['bargain_offer'].append(discount_offer_4)
-        state['bargain_count'] = state['bargain_count'] + 1
-        print(f"bargaining_count print #3: {state['bargain_count']}")
-        return f"The product can have upto {discount_offer_4} percent discount. Would you like to accept or reject or counter offer?"
-    
-    elif state['bargain_count'] == 4:
-        state['bargain_count'] = state['bargain_count'] + 1
+        # customer_counter_offer = state.get('counter_offer')[-1]
+        customer_counter_offer = state['counter_offer'][-1]
+        print(f"customer_counter_offer -> {customer_counter_offer}")
+        if state['discount_offer'][-1] < customer_counter_offer:
+            discount_offer_2 = customer_counter_offer * 0.6
+            state['discount_offer'].append(discount_offer_2)
+            print(f"discount_offer_2 -> {discount_offer_2}")
+            print(f"discount_offers {state['discount_offer']}")
+            return f"The product can have upto {discount_offer_2} percent discount. Would you like to accept or reject or counter offer?"
+        elif state['discount_offer'][-1] > customer_counter_offer:
+            return f"Are you sure about your offer of {customer_counter_offer} percent discount? or would you like to counter offer?"
+        elif customer_counter_offer == state['discount_offer'][0]:
+            return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        
+        state['interaction_count'] = state['interaction_count'] + 1
+        print(f"bargaining_count print #2: {state['interaction_count']}")
+
+    elif state['interaction_count'] == 2:
+        state['interaction_count'] = state['interaction_count'] + 1
+        print(f"bargaining_count print #3: {state['interaction_count']}")
+
+        # customer_counter_offer = state.get('counter_offer')[-1]
+        customer_counter_offer = state['counter_offer'][-1]
+        print(f"customer_counter_offer -> {customer_counter_offer}")
+        if state['discount_offer'][-1] < customer_counter_offer:
+            discount_offer_3 = customer_counter_offer * 0.75
+            state['discount_offer'].append(discount_offer_3)
+            print(f"discount_offer_3 -> {discount_offer_3}")
+            print(f"discount_offers {state['discount_offer']}")           
+            return f"The product can have upto {discount_offer_3} percent discount. Would you like to accept or reject or counter offer?"
+        elif state['discount_offer'][-1] > customer_counter_offer:
+            return f"Are you sure about your offer of {customer_counter_offer} percent discount? or would you like to counter offer?"
+        elif customer_counter_offer == state['discount_offer'][0]:
+            return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        else:
+            return f"Not a valid option"
+        
+    elif state['interaction_count'] == 3:
+        state['interaction_count'] = state['interaction_count'] + 1
+        print(f"bargaining_count print #3: {state['interaction_count']}")
+
+        # customer_counter_offer = state.get('counter_offer')[-1]
+        customer_counter_offer = state['counter_offer'][-1]
+        print(f"customer_counter_offer -> {customer_counter_offer}")
+        print(f"counter_offer {state['counter_offer']}")
+        if state['discount_offer'][-1] < customer_counter_offer:
+            discount_offer_4 = customer_counter_offer * 0.90
+            state['discount_offer'].append(discount_offer_4)
+            print(f"discount_offer_4 -> {discount_offer_4}")
+            print(f"discount_offers {state['discount_offer']}")
+            return f"The product can have upto {discount_offer_4} percent discount. Would you like to accept or reject or counter offer?"
+        elif state['discount_offer'][-2] > customer_counter_offer:
+            state['interaction_count'] = state['interaction_count'] + 1
+        elif customer_counter_offer == state['discount_offer'][0]:
+            return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        else:
+            return f"Not a valid option"
+        
+    elif state['interaction_count'] == 4:
+        state['interaction_count'] = state['interaction_count'] + 1
         print(f"maximum bargain limit is reached")
-        customer_counter_offer = state.get('counter_offer')[-1]
-        if state['bargain_offer'][-1] < customer_counter_offer < state['bargain_offer'][-2]:
+
+        # customer_counter_offer = state.get('counter_offer')[-1]
+        customer_counter_offer = state['counter_offer'][-1]
+        print(f"customer_counter_offer -> {customer_counter_offer}")
+        print(f"counter_offer {state['counter_offer']}")
+        if state['discount_offer'][-1] < customer_counter_offer:
             print("maximum bargain limit is reached")
-            return f"The product can have final discount of {state['bargain_offer'][-1]} percent. Would you like to accept or reject or counter offer?"
+            return f"The product can have final discount of {state['discount_offer'][-1]} percent. Would you like to accept or reject?"
         else:
             return f"The product can have final discount of {product_price_info[0].get('product_margin_percent')} percent. Would you like to start bargaining?"
                   
     else:
-        state['bargain_count'] = state['bargain_count']
-        print(f"bargaining_count print #5: {state['bargain_count']}")
+        state['interaction_count'] = state['interaction_count']
+        print(f"bargaining_count print #5: {state['interaction_count']}")
         return f"You have reached the maximum limit on the discount that can be offered on the product."
 
-#     bargaining_outcome = [{'bargain_offer': discount_offer_1}]
 
-#     return bargaining_outcome
+@tool
+def extract_numbers_from_messages(state: State,
+                                  customer_counter_offer: Optional[int] = None,) -> str:
+    """ Extract numbers from messages and store them in relevant states. During the price negotiation process, 
+        numbers mentioned in AIMessages are discount offers, whereas numbers mentioned in HumanMessages are counter offers.
+        Discount offers should be stored in state['discount_offer'].
+        Couner offers should be stored in state['counter_offer']
+
+        Examples:
+        AIMessage(content='The maximum possible discount on the saucepan is 13.55%'). Here 13.55% is the discount offer. state['discount_offer'] = 19.55
+        HumanMessage(content='Counter offer on the saucepan is 23%'). Here 23% is the counter offer. state['counter_offer'] = 25
+    """
+    regx_pattern = r'\d+\.\d+|\d+'
+    last_message = state["messages"][-1]
+
+    if last_message['type'] == 'ai':
+        matches = re.findall(regx_pattern, last_message['content'])    
+        state['counter_offer'].append(matches[0])
+    elif last_message['type'] == 'human':
+        matches = re.findall(regx_pattern, last_message['content'])    
+        state['discount_offer'].append(matches[0])
+    else:
+        print('The message is ToolMessage')
+    
+    return 'State graph successfully updated'
 
 
 # Price negotiating assistant
@@ -856,16 +899,13 @@ price_negotiator_prompt = ChatPromptTemplate.from_messages(
             "Example: Can I have an offer on the toaster?"
 
             "The primary assistant also delegates work to you when the user wants to start a price negotiating process. "
+            "Example: Yes, please I want to negotiate price of the saucepan"
+            "Example: Please connect, I want to know about offers or discount offers on the cutting board."
 
             "You interact with customers to offer them special discounts. "
 
             " When the primary assistant delegates you the task, it means that the logged in customer is a loyalty customer. "
             " When the primary assistant delegates you the task, it also means that the logged in customer has made bulk purchases in the past. "
-
-            "Compare the products present in the cart today to the past purchases. "
-            " Separate out the products that are present in the cart today and have been purchases in bulk in the past. "
-            " Separate out products of the cart that meet the criteria of bulk purchase today, even if that product has not been purchased in bulk in the past. "
-            " Separate out the products of the cart that neither meet bulk purchase criterion from the past nor today. "
 
             "Remember that bulk purchase means if a particular product has been purchased in quantities of 30 or more units in one purchase on a day. "
             " Also bulk purchase means that a product has been multiple times to make the accummulated quantity as 30 or more units. "
@@ -875,42 +915,42 @@ price_negotiator_prompt = ChatPromptTemplate.from_messages(
             "Do not disclose product margin percentages and reduced prices associated with products to customers. This information is for internal use only."
             "You are now ready to interact with the customer for negotiating the price. "
 
-            #"Using the reduced product margin, offer the customer a starting discount, i.e., discount_offer_1 equal to (reduced_product_margin - (reduced_product_margin * 0.15))"
             "Check if the querried product (product_id) is present in the extracted common products list (common_products_retreived_info). "
-            " If yes, then using the product price info (common_products_price_info) let the customer know of the maximum possible discount equal to discount_offer_1. "
+            " If yes, then let the customer know of the maximum possible discount for that product (product_id). Store this value in discount_offer[0].  "
             " Otherwise, inform the customer that the product is not eligible for discount."
             "Request a response from the customer in the form of Accept, Reject, or Counter Offer. "
             ' If the customer\'s response is Accept, then "CompleteOrEscalate" the dialog to the host assistant.'
             ' If the customer\'s response is Reject, then "CompleteOrEscalate" the dialog to the host assistant.'
             " In the customer's response is Counter Offer, then evaluate the offer to make further decisions. "
+            " Do not hand over the dialog to the host assistant if the customer is putting counter offers. "
 
+            " Extract the number you have provided the customer as discount from your response and store it for future use. "
             "You can ask the customer to make a counter offer a maximum of 3 times. "
+            "Keep track of how many times the customer makes a counter offer. Store this count in interaction_count. "
 
-            "If the customer gives a counter offer, you will not accept this offer instantly but you will evaluate it and respond accordingly. "
+            "If the customer makes the first counter offer, you will not accept this offer instantly but you will evaluate it and respond accordingly based on a fixed criteria. "
+            " Extract the value of the customer counter offer from customer's message and store it for future use. "
 
-            "If the customer opts to counter offer with amount counter_offer_1, you will not accept this offer instantly but you will evaluate counter_offer_1. "
-            ' If counter_offer_1 is greater than discount_offer_1, then go to "interactive_price_negotiation" for calculating the second discount offer, i.e., discount_offer_2. '
-            "If the customer opts to counter offer with amount counter_offer_2, you will not accept this offer instantly but you will evaluate counter_offer_2. "
-            ' If counter_offer_2 is greater than discount_offer_2 and is less than discount_offer_1, then go to "interactive_price_negotiation" for calculating the third discount offer, i.e., discount_offer_3. '
-            "If the customer opts to counter offer with amount counter_offer_3, you will not accept this offer instantly but you will evaluate counter_offer_2. "
-            ' If counter_offer_3 is greater than discount_offer_3 and is less than discount_offer_2, then go to "interactive_price_negotiation" for calculating the last discount offer, i.e., discount_offer_4. '
+            " Atfer extracting the counter offer (counter_offer[0]) value, evaluate to check if it is greater than or smaller to the inital discount offer (discount_offer[0])"
+                                                                                                                                                                                  
+            ' If customer offer is greater than the offered discount, then go to "interactive_price_negotiation" for calculating the second discount offer, i.e., discount_offer[1]. '
+                                                                                                                                                                 
+            ' Use the saved and stored information about discount and counter offer in "interactive_price_negotiation" to come up with a new discount offer. '
+
+            "If the customer makes the second counter offer, you will not accept this offer instantly but you will evaluate it and respond accordingly based on a fixed criteria. "
+            ' Extract the value of the customer counter offer from customer\'s message and store it for future use. '
+            " Atfer extracting the counter offer (counter_offer[1]) value, evaluate to check if it is greater than or smaller to the second discount offer (discount_offer[1])"
+            ' If the customer\'s offer lies between the initial and second discount, then go to "interactive_price_negotiation" for calculating the third discount offer, i.e., discount_offer[2]. '
+            ' Use the saved and stored information about discount and counter offer in "interactive_price_negotiation" to come up with a new discount offer. '
+
+            "If the customer makes the third and final counter offer, you will not accept this offer instantly but you will evaluate it and respond accordingly based on a fixed criteria. "
+            " Extract the value of the customer counter offer from customer's message and store it for future use. "
+            " Atfer extracting the counter offer (counter_offer[2]) value, is greater than or smaller to the second discount offer (discount_offer[2])"
+            ' If the customer\'s offer is less than the maximum possible discount, then go to "interactive_price_negotiation" for calculating the final discount offer, i.e., discount_offer[3]. '
+            ' Use the saved and stored information about discount and counter offer in "interactive_price_negotiation" to come up with a new discount offer. '
 
             ' Any time in this negotiationg process if the customer\'s response is Accept, then "CompleteOrEscalate" the dialog to the host assistant.'
             ' Any time in this negotiationg process if the customer\'s response is Reject, then "CompleteOrEscalate" the dialog to the host assistant.'
-
-            # "Customer's first offer is say customer_offer_1. You will not accept this offer and make a counter offer equal to customer_offer_2 * 0.60. "
-            # "Customer's second offer is say customer_offer_2. You will not accept this offer and make a counter offer equal to customer_offer_2 * 0.75. "
-            # "Customer's third offer is say customer_offer_3. You will not accept this offer and make a counter offer equal to customer_offer_3 * 0.90. "
-            # If the customer opts to counter offer with amount counter_offer_1,
-            # check if counter_offer_1 > discount_offer_1, then discount_offer_2 = counter_offer_1 * 0.6
-            # Ask the customer to accept/ reject/ or make counter offer to discount_offer_2.
-            # If the customer opts to counter offer with amount counter_offer_2,
-            # check if discount_offer_2 < counter_offer_2 < discount_offer_1, then discount_offer_3 = counter_offer_2 * 0.75
-            # Ask the customer to accept/ reject/ or make counter offer to discount_offer_3.
-            # If the customer opts to counter offer with amount counter_offer_3,
-            # check if discount_offer_3 < counter_offer_3 < discount_offer_2, then discount_offer_4 = counter_offer_3 * 0.9
-            # Ask the customer to accept/ reject/ or make counter offer to discount_offer_4.
-            # Any time the customer accepts or rejects the discount offer, then CompleteOrEscalate to the host assistant
 
             "As a specialized price negotiating assistant, you have permission to apply the negotiated discount to the bulk purchased products in the cart. "
             " You should not reduce the price of those items in the cart, which have been separated out as not meeting bulk purchases criteria."
@@ -925,14 +965,14 @@ price_negotiator_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-price_negotiation_general_tools = [fetch_common_products_cart_history, fetch_price_info_for_price_negotiation, product_specific_discount_checker]
+price_negotiation_general_tools = [fetch_common_products_cart_history, fetch_price_info_for_price_negotiation, product_specific_discount_checker, extract_numbers_from_messages]
+price_negotiation_interim_tools = []
 price_negotiation_interaction_tools = [interactive_price_negotiation]
 price_negotiation_tools = price_negotiation_general_tools + price_negotiation_interaction_tools
 
 pn_interactive_tool_names = {t.name for t in price_negotiation_interaction_tools}
 
 price_negotiation_runnable = price_negotiator_prompt | llm.bind_tools(
-    # price_negotiation_general_tools +  price_negotiation_interaction_tools
     price_negotiation_tools
     + [CompleteOrEscalate]
 )
@@ -1008,15 +1048,13 @@ class ToPriceNegotiatingAssistant(BaseModel):
 
     request: str = Field(
         description="Accept/ Reject/ Counter Offer response and counter offer from customers.")
-    # information: str = Field(
-    #     description="Inform the status and progress of the discount eligibilty check assistant."
-    # )
-    customer_counter_offer: int = Field(description="The counter offer given by the customer.")
+
+    customer_counter_offer: float = Field(description="The counter offer given by the customer.")
     
     class Config:
         schema_extra = {
             "example": {
-                "customer_counter_offer": 25,
+                "customer_counter_offer": 0,
                 "request": "Accept/ Reject/ Counter Offer response and counter offer from customers.",
             }
         }
@@ -1035,24 +1073,17 @@ primary_assistant_prompt = ChatPromptTemplate.from_messages(
             " Use product names and descriptions instead of IDs. "
             "Provide product images only if the customer specifically asks for pictures and/ or if the customer wants to see the product. "
             "You can provide information about available quatities of products when providing general information about the products. "
-            # "If a customer requests general information about the status of the cart, you are allowed to provide this information. "
             
-            # "If a customer asks about a discount on a product, delegate the task to the specialized assistant to evaluate "
-            # "the over all eligibility of the customer for the discount by invoking corresponding tools. "
-            
-            "If a discount eligible customer asks about offers on specific products, delegate the task to the specialized agent for starting a price negotiation process. "
+            "If a customer asks about a discount on a product, delegate the task to the specialized assistant to evaluate "
+            "the over all eligibility of the customer for the discount by invoking corresponding tools. "
+                                                                                                                                                                                     
             "You are not able to make any decisions. Only the specialized assistant has the permission to enagage in product specific discount conversations. "
+            "If a discount eligible customer asks about offers on specific products, delegate the task to the specialized agent for starting a price negotiation process. "
             
-            # " The specialized assistant will inform the customer that upto a pre-calculated discount amount can be offered. Do not disclose the calculation criterion to customers. "
-            # " The specialized assistant will ask for customer intent to engage in the price negotiation process. "
-            
-            "If the customer wants to engage in bragaining and price negotiation, delegate the task to the appropriate specialized assistant by invoking the corresponding tools. "
+            "If the customer wants to engage in bragaining, price negotiation, and discount offer discussions, delegate the task to the appropriate specialized assistant by invoking the corresponding tools. "
             "You are not allowed to engage in the price negotiation conversation. Only the specialized assistant is given permission to do this with the customer."
             
-            # "When the price negotiation process completes either by reaching the maximum possible discount limit or "
-            # "when the customer does not want to bargain any more, recommend similar products and discounts on them to the customer. You should "
-            # "delegate this task to the appropriate specialized assistant by invoking the corresponding tool. You are not able to make any recommendations. "
-            # "Only the specialized assistant is given premission to look for customer's past purchases, wishlist, and items in the cart to recommend similar products."
+            "When the customer accepts the offer, provide a negotiation complete message, thank the customer, and ask if the customer would like to negotiate for any of the remaining products in the cart. "
             "The user is not aware of the different specialized assistants, so do not mention them; just quietly delegate through function calls. "
             "Provide detailed information to the customer, and always double-check the database before concluding that information is unavailable. "
             "\n\nCurrent logged in user information:\n<User>\n{user_info}\n</User>",
@@ -1231,10 +1262,10 @@ price_whisperer_bot_graph = builder.compile(
     #     # "pn_general_tools",
     #     "pn_interactive_tools",
     # ],
-    interrupt_after=[
-        "pn_interactive_tools",
-    ],
-    debug=True,
+    # interrupt_before=[
+    #    "pn_interactive_tools",
+    # ],
+    debug=False,
 )
 
 from IPython.display import Image, display
@@ -1280,7 +1311,7 @@ config = {
 
 
 
-st.title("Price Negotiator Chatbot")
+st.title("Price Whisperer")
 
 #st.session_state['customer_id'] = 17
 
@@ -1294,9 +1325,9 @@ print(f"session_state_customer_id {st.session_state['customer_id']}")
 
 if "chat_history" not in st.session_state:
   st.session_state.chat_history = [
-    AIMessage(content="""Hello, I am a price negotiator bot. 
+    AIMessage(content="""Hello, I am Price Whisperer, your assistant for negotiating prices on your purchase. 
               Loyalty customers are eligible for special offers. 
-              Lets start evaluating your eligibilty.""")
+              Lets start evaluating your eligibility.""")
   ]
 
 for message in st.session_state.chat_history:
