@@ -24,7 +24,7 @@ if st.button("Register"):
     with st.spinner("Connecting to database..."):
         db_conn_2 = st.session_state.db
 
-        sql_command = """INSERT INTO customer (first_name,last_name,customer_email,customer_location) VALUES (:first_name, :last_name, :customer_email, :customer_location)
+        sql_command = """INSERT INTO Customer (first_name,last_name,customer_email,customer_location) VALUES (:first_name, :last_name, :customer_email, :customer_location)
                       """
         sql_parameters = {'first_name': st.session_state['first_name'],
                         'last_name': st.session_state['last_name'],
