@@ -773,7 +773,7 @@ def interactive_price_negotiation(product_id: int,
         extracted_product_price_margin = product_price_info[0].get('product_margin_percent')
         print(f"extracted_product_price_margin -> {extracted_product_price_margin}")
 
-        state['maximum_profit_margin'] = extracted_product_price_margin
+        state['maximum_profit_margin'] = product_price_info[0].get('product_margin_percent')
 
         discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.25)
         state['discount_offer'].append(discount_offer_1)
