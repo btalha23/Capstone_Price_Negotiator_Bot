@@ -493,7 +493,7 @@ def fetch_common_products_cart_history() -> list[dict]:
 
                 -- Condition 3: 30 or more units in the cart for today's purchase
                 SELECT customer_id, product_id
-                FROM price_negotiation.customerinteractions
+                FROM price_negotiation.CustomerInteractions
                 WHERE interaction_type = 'cart_add'
                 AND quantity >= :loyalty_customer_bulk_purchases_quantity
                 AND DATE(interaction_date) = CURDATE()
@@ -567,7 +567,7 @@ def fetch_price_info_for_price_negotiation() -> list[dict]:
 
             -- Condition 3: 30 or more units in the cart for today's purchase
             SELECT customer_id, product_id
-            FROM price_negotiation.customerinteractions
+            FROM price_negotiation.CustomerInteractions
             WHERE interaction_type = 'cart_add'
             AND quantity >= :loyalty_customer_bulk_purchases_quantity
             AND DATE(interaction_date) = CURDATE()
@@ -640,7 +640,7 @@ def product_specific_discount_checker(product_id: int,
                 
                 -- Condition 3: 30 or more units in the cart for today's purchase
                 SELECT customer_id, product_id
-                FROM price_negotiation.customerinteractions
+                FROM price_negotiation.CustomerInteractions
                 WHERE interaction_type = 'cart_add'
                 AND quantity >= :loyalty_customer_bulk_purchases_quantity
                 AND DATE(interaction_date) = CURDATE()
@@ -722,7 +722,7 @@ def product_specific_discount_checker(product_id: int,
 @tool
 def interactive_price_negotiation(product_id: int,
                                   state: State,
-                                  customer_counter_offer: Optional[int] = None,) -> str:
+                                  customer_counter_offer: Optional[float] = None,) -> str:
     """ Based on customer response about the product and counter offers, engage with the customer. Evaluate customer's counter offer and
         offer discounts 3 times at most.
     """
