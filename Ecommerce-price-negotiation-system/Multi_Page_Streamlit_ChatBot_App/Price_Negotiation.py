@@ -155,6 +155,7 @@ class State(TypedDict):
     interaction_count: int
     discount_offer: list[float]
     counter_offer: list[float]
+    maximum_profit_margin: float
 
 # This node will be shared for exiting all specialized assistants
 def pop_dialog_state(state: State) -> dict:
@@ -319,7 +320,7 @@ loyalty_customer_eligibity = [{"loyalty_customer_num_purchase_days": 3},
                             ]
 
 # llm = ChatOpenAI(temperature=0,
-#                  model="gpt-3.5-turbo")
+#                  model="gpt-3.5-turbo-0125")
 llm = ChatOpenAI(temperature=0,
                  model='gpt-4o-mini')
 
@@ -710,7 +711,11 @@ def product_specific_discount_checker(product_id: int,
         print(product_price_info)
 
         extracted_product_price_margin = product_price_info[0].get('product_margin_percent')
-        discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.15)
+
+        print(extracted_product_price_margin)
+
+        state['maximum_profit_margin'] = extracted_product_price_margin
+        discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.25)
         
         state['discount_offer'].append(discount_offer_1)
         state['interaction_count'] = 1
@@ -722,7 +727,7 @@ def product_specific_discount_checker(product_id: int,
 @tool
 def interactive_price_negotiation(product_id: int,
                                   state: State,
-                                  customer_counter_offer: Optional[int] = None,) -> str:
+                                  customer_counter_offer: Optional[float] = None,) -> str:
     """ Based on customer response about the product and counter offers, engage with the customer. Evaluate customer's counter offer and
         offer discounts 3 times at most.
     """
@@ -766,6 +771,10 @@ def interactive_price_negotiation(product_id: int,
         print(product_price_info)
 
         extracted_product_price_margin = product_price_info[0].get('product_margin_percent')
+        print(f"extracted_product_price_margin -> {extracted_product_price_margin}")
+
+        state['maximum_profit_margin'] = extracted_product_price_margin
+
         discount_offer_1 = extracted_product_price_margin - (extracted_product_price_margin * 0.25)
         state['discount_offer'].append(discount_offer_1)
         print(f"discount_offer_1 -> {discount_offer_1}")
@@ -782,16 +791,16 @@ def interactive_price_negotiation(product_id: int,
         # customer_counter_offer = state.get('counter_offer')[-1]
         customer_counter_offer = state['counter_offer'][-1]
         print(f"customer_counter_offer -> {customer_counter_offer}")
-        if state['discount_offer'][-1] < customer_counter_offer < extracted_product_price_margin:
+        if state['discount_offer'][-1] < customer_counter_offer < state['maximum_profit_margin']:
             discount_offer_2 = (state['discount_offer'][-1] + customer_counter_offer)/2
             state['discount_offer'].append(discount_offer_2)
             print(f"discount_offer_2 -> {discount_offer_2}")
             print(f"discount_offers {state['discount_offer']}")
             return f"New discount on the product is {discount_offer_2} percent. Would you like to accept or reject or counter offer?"
-        elif state['discount_offer'][-1] > customer_counter_offer:
+        elif state['discount_offer'][-1] >= customer_counter_offer:
             return f"Are you sure about your offer of {customer_counter_offer} percent discount? or would you like to counter offer?"
-        # elif customer_counter_offer == state['discount_offer'][0]:
-        #     return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        elif customer_counter_offer >= state['maximum_profit_margin']:
+            return f"The counter offer of {customer_counter_offer} percent is not acceptable. Please provide another counter offer with a differnt and smaller value."
         else:
             return f"Not a valid option"
                                                                          
@@ -803,16 +812,16 @@ def interactive_price_negotiation(product_id: int,
         # customer_counter_offer = state.get('counter_offer')[-1]
         customer_counter_offer = state['counter_offer'][-1]
         print(f"customer_counter_offer -> {customer_counter_offer}")
-        if state['discount_offer'][-1] < customer_counter_offer < extracted_product_price_margin:
+        if state['discount_offer'][-1] < customer_counter_offer < state['maximum_profit_margin']:
             discount_offer_3 = (state['discount_offer'][-1] + customer_counter_offer)/2
             state['discount_offer'].append(discount_offer_3)
             print(f"discount_offer_3 -> {discount_offer_3}")
             print(f"discount_offers {state['discount_offer']}")           
             return f"The product can have upto {discount_offer_3} percent discount. Would you like to accept or reject or counter offer?"
-        elif state['discount_offer'][-1] > customer_counter_offer:
+        elif state['discount_offer'][-1] >= customer_counter_offer:
             return f"Are you sure about your offer of {customer_counter_offer} percent discount? or would you like to counter offer?"
-        # elif customer_counter_offer == state['discount_offer'][0]:
-        #     return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        elif customer_counter_offer >= state['maximum_profit_margin']:
+            return f"The counter offer of {customer_counter_offer} percent is not acceptable. Please provide another counter offer with a differnt and smaller value."
         else:
             return f"Not a valid option"
         
@@ -824,16 +833,16 @@ def interactive_price_negotiation(product_id: int,
         customer_counter_offer = state['counter_offer'][-1]
         print(f"customer_counter_offer -> {customer_counter_offer}")
         print(f"counter_offer {state['counter_offer']}")
-        if state['discount_offer'][-1] < customer_counter_offer < extracted_product_price_margin:
+        if state['discount_offer'][-1] < customer_counter_offer < state['maximum_profit_margin']:
             discount_offer_4 = (state['discount_offer'][-1] + customer_counter_offer)/2
             state['discount_offer'].append(discount_offer_4)
             print(f"discount_offer_4 -> {discount_offer_4}")
             print(f"discount_offers {state['discount_offer']}")
             return f"New discount on the product is {discount_offer_4} percent. Would you like to accept or reject or counter offer?"
-        elif state['discount_offer'][-1] > customer_counter_offer:
+        elif state['discount_offer'][-1] >= customer_counter_offer:
             return f"Are you sure about your offer of {customer_counter_offer} percent discount? or would you like to counter offer?"
-        # elif customer_counter_offer == state['discount_offer'][0]:
-        #     return f"{customer_counter_offer} percent discount is the maximum you can get? Please provide another counter offer"
+        elif customer_counter_offer >= state['maximum_profit_margin']:
+            return f"The counter offer of {customer_counter_offer} percent is not acceptable. Please provide another counter offer with a differnt and smaller value."
         else:
             return f"Not a valid option"
         
@@ -845,11 +854,11 @@ def interactive_price_negotiation(product_id: int,
         customer_counter_offer = state['counter_offer'][-1]
         print(f"customer_counter_offer -> {customer_counter_offer}")
         print(f"counter_offer {state['counter_offer']}")
-        if state['discount_offer'][-1] < customer_counter_offer < extracted_product_price_margin:
+        if state['discount_offer'][-1] < customer_counter_offer < state['maximum_profit_margin']:
             print("maximum bargain limit is reached")
             return f"The product can have final discount of {state['discount_offer'][-1]} percent. Would you like to accept or reject?"
         else:
-            return f"The product can have final discount of {extracted_product_price_margin} percent. Would you like to start bargaining?"
+            return f"The product can have final discount of {state['maximum_profit_margin']} percent. Would you like to accept or reject this discount?"
                   
     else:
         state['interaction_count'] = state['interaction_count']
@@ -1075,7 +1084,7 @@ primary_assistant_prompt = ChatPromptTemplate.from_messages(
             "Provide product images only if the customer specifically asks for pictures and/ or if the customer wants to see the product. "
             "You can provide information about available quatities of products when providing general information about the products. "
             
-            "If a customer asks about a discount on a product, delegate the task to the specialized assistant to evaluate "
+            "If a customer asks eligibility questions, delegate the task to the specialized assistant to evaluate "
             "the over all eligibility of the customer for the discount by invoking corresponding tools. "
                                                                                                                                                                                      
             "You are not able to make any decisions. Only the specialized assistant has the permission to enagage in product specific discount conversations. "
@@ -1301,6 +1310,8 @@ import uuid
 # shutil.copy(backup_file, db)
 thread_id = str(uuid.uuid4())
 
+st.session_state['customer_id'] = 17
+
 config = {
     "configurable": {
         # The customer_id is used in our discount eligibilty check tools to
@@ -1314,8 +1325,6 @@ config = {
 
 
 st.title("Price Whisperer")
-
-#st.session_state['customer_id'] = 17
 
 if st.session_state['customer_id']:
         st.sidebar.button("Logout", on_click=lambda: st.session_state.update(customer_id=None, cart=[]))
